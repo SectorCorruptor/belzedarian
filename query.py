@@ -12,8 +12,6 @@ import requests
 URL = "https://belzedar.duckdns.org/atomicdb/api/query"
 
 def query_from_url(fen):
-    global URL
-    
     response = requests.get(URL,params={"fen": fen},timeout=5)
     # Including 404, so whoever uses this is forced to use a
     # try-except to fallback to atomic-sf
