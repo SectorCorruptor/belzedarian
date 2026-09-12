@@ -146,7 +146,7 @@ class Board:
             self.fullmoves += 1
 
     @property
-    def fen(self):
+    def get_fen(self):
         """Get this Board as a FEN"""
         fen =" ".join([re.sub(" +",lambda s:str(len(s.group())),"/".join(["".join(i)for i in self.board])),
               self.side,
