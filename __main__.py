@@ -1,0 +1,162 @@
+"""The Belzedarian Bot's code.
+
+Not much to see here. Run as the top-level user to activate
+the bot on Lichess and be able to play it.
+
+The difference between this and core.py is that, well, this 
+"""
+
+import json
+import requests
+import time
+
+import core as _core
+import fen_updater as _fen
+
+API = "https://lichess.org/api"
+
+def _extract_belzedar_secrets(file):
+    """Internal function"""
+    secrets = json.loads((_tmp:=open(file)).read())
+    # recov_phrase = secrets["proton_recovery_phrase"] # unused
+    token = secrets["lichess_token"]
+    _tmp.close()
+    return token
+
+class Communicator:
+    def __init__(self, token):
+        """Initialise a Lichess Communicator"""
+        self.session = requests.Session()
+        self.session.headers["Authorization"]="Bearer "+ token
+
+        response = self.session.get(f"{API}/account")
+        response.raise_for_status()
+
+        self.account = response.json()
+        self.id = self.account["id"]
+
+
+    def make_move(self, game_id, move):
+        url = f"{API}/bot/game/{game_id}/move/{move}"
+
+        for attempt in range(3):
+            try:
+                response = self.session.post(url, timeout=10)
+
+                if response.status_code == 429:
+                    print("Lichess rate limit; waiting...")
+                    time.sleep(60)
+                    continue
+
+                response.raise_for_status()
+                return
+
+            except requests.exceptions.ConnectionError as err:
+                if attempt == 2:
+                    raise
+
+                print(f"Connection error sending {move}; retrying...")
+                time.sleep(1)
+
+    def handle_challenges(self, event):
+        """Handle an incoming Lichess challenge."""
+        challenge = event["challenge"]
+        challenge_id = challenge["id"]
+
+
+        if challenge["variant"]["key"] != "atomic":
+            response = self.session.post(f"{API}/challenge/{challenge_id}/decline")
+            response.raise_for_status()
+        else:
+            try:
+                response = self.session.post(f"{API}/challenge/{challenge_id}/accept")
+                response.raise_for_status()
+            except requests.exceptions.HTTPError:
+                return
+
+
+        # NOTE to self: do not try to return anything here; challenges will
+        # trigger a gameStart if we accept.
+
+    def wait_for_game(self):
+        """Wait until a game starts or a challenge is offered"""
+        response = self.session.get(f"{API}/stream/event", stream=True)
+        response.raise_for_status()
+
+        for line in response.iter_lines():
+            if not line:
+                continue
+
+            event = json.loads(line)
+
+            if event["type"] == "challenge":
+                self.handle_challenges(event)
+
+            elif event["type"] == "gameStart":
+                return event["game"]["id"]
+
+    def play_game(self, game_id, core):
+        response = self.session.get(
+            f"{API}/bot/game/stream/{game_id}",
+            stream=True
+        )
+        response.raise_for_status()
+
+        board = None
+        side = None
+        move_count = 0
+
+        for line in response.iter_lines():
+            if not line:
+                continue
+
+            event = json.loads(line)
+
+            if event["type"] == "gameFull":
+                board = _fen.Board()
+                side = "w" if self.id == event["white"]["id"] else "b"
+
+                moves = event["state"]["moves"].split()
+                for move in moves:
+                    print("BEFORE:", board.get_fen)
+                    board.push_move(move)
+                    print("AFTER", move, board.get_fen)
+
+                move_count = len(moves)
+
+                if side == board.side:
+                    move = core.get_move(board.get_fen, )#event["wtime"], event["btime"], event["winc"], event["binc"])
+                    self.make_move(game_id, move)
+                
+            elif event["type"] == "gameState":
+                moves = event["moves"].split()
+
+                for move in moves[move_count:]:
+                    print("BEFORE:", board.get_fen)
+                    board.push_move(move)
+                    print("AFTER", move, board.get_fen)
+
+                move_count = len(moves)
+
+                if event["status"] != "started":
+                    return 
+
+                if board.side != side:
+                    continue
+
+                move = core.get_move(board.get_fen, event["wtime"], event["btime"], event["winc"], event["binc"])
+                self.make_move(game_id, move)
+
+if __name__ == "__main__":
+    TOKEN = _extract_belzedar_secrets("secrets.json")
+    
+    communicator = Communicator(TOKEN)
+    core = _core.Core()
+
+    while True:
+        print("Waiting...")
+        game_id = communicator.wait_for_game()
+        print("Playing...")
+        core.new_game()
+        communicator.play_game(game_id, core)
+        print("Game over. GG!")
