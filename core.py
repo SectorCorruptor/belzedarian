@@ -29,7 +29,7 @@ class Core:
         # until the next game.
         self.out_of_eval = False
 
-    def get_move(self, fen, wtime=None, btime=None, winc=None, binc=None, depth=20):
+    def get_move(self, fen, wtime=None, btime=None, winc=None, binc=None, movetime=2000, depth=20):
         if not self.out_of_eval:
             try:
                 move = _query.query_from_url(fen)
@@ -51,6 +51,7 @@ class Core:
             btime=btime,
             winc=winc,
             binc=binc,
+            movetime=movetime
             depth=depth
         )
         print("SF MOVE:", repr(move))
