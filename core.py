@@ -51,7 +51,7 @@ class Core:
             btime=btime,
             winc=winc,
             binc=binc,
-            movetime=movetime
+            movetime=movetime,
             depth=depth
         )
         print("SF MOVE:", repr(move))
