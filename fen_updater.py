@@ -1,13 +1,33 @@
 """Helper module for the Belzedarian bot, to update moves in Atomic."""
 
-import re
+import chess
+import chess.variant
 
+STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+class Board:
+    def __init__(self, position=STARTPOS):
+        self.board = chess.variant.AtomicBoard(position)
+
+    def push_move(self, move):
+        mv = chess.Move.from_uci(move)
+        self.board.push(move=mv)
+
+    @property
+    def get_fen(self):
+        return self.board.fen(en_passant="fen", promoted=False)
+
+    @property
+    def side(self):
+        return "w" if self.board.turn==chess.WHITE else "b"
+# old version
+"""
+import re
 STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 MOVE = re.compile("([a-h])([1-8])([a-h])([1-8])([qrbn])?")
 
 class Board:
     def __init__(self, position=STARTPOS):
-        """Initialize a Board, taking a FEN in position"""
         # extract components
         components = position.split()
         # and set
@@ -20,7 +40,6 @@ class Board:
         self.halfmoves, self.fullmoves = map(int, [components[4], components[5]])
 
     def push_move(self, move):
-        """Make the move move on self."""
 
         # Turns out castling is NOT e8g8, its more like e8h8 for some reason from
         # Lichess
@@ -147,7 +166,6 @@ class Board:
 
     @property
     def get_fen(self):
-        """Get this Board as a FEN"""
         fen =" ".join([re.sub(" +",lambda s:str(len(s.group())),"/".join(["".join(i)for i in self.board])),
               self.side,
               self.castling_rights if self.castling_rights else "-",
@@ -163,3 +181,4 @@ class Board:
             self.fullmoves
         )
         return fen
+"""
