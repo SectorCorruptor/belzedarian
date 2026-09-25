@@ -44,6 +44,12 @@ class Core:
                     print(f"Error: {err}", file=sys.stderr)
                 else:
                     self.out_of_eval = True
+            except Exception as err:
+                # again we've reached a fatal error with connecting to
+                # atomicdb, but that shouldn't incapacitate us. fallback
+                # to sf, but let us know what happened
+                print(f"Error: {err}", file=sys.stderr)
+                self.out_of_eval = True
         self.prepare_sf(4, 512, fen) # change per user
         print("Sent FEN:", fen)
         move = self.engine.go(
