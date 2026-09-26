@@ -29,24 +29,21 @@ class OpeningCache(OrderedDict):
         """Return the AtomicDB move for this FEN, marking this move as
         most recently used"""
         value = super().__getitem__(fen)
-        self.move_to_end(fen, last=False)
+        self.move_to_end(fen)
         return value
 
-    def add_fen_move(self, fen, move):
+    def __setitem__(self, fen, move):
         """Add this move from AtomicDB, removing the least recently used
         move if cache is over size limit"""
-        self[fen] = move
+        super().__setitem__(fen, move)
+        self.move_to_end(fen) # if we assigned this, we used it, meaning it's
+                              # extra-stable under LRU
         if len(self) > self.maxsize:
             self.popitem(False)
 
     def save_to_path(self):
         """Save to disk."""
-        try:
-            with open(self.path, "w") as file:
-                for fen, move in self.items():
-                    file.write(f"{fen}|{move}\n")
-        except FileNotFoundError:
-            with open(self.path, "x") as file:
-                for fen, move in self.items():
-                    file.write(f"{fen}|{move}\n")
+        with open(self.path, "w") as file:
+            for fen, move in self.items():
+                file.write(f"{fen}|{move}\n")
 
