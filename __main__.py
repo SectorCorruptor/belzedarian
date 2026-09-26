@@ -156,5 +156,15 @@ if __name__ == "__main__":
         game_id = communicator.wait_for_game()
         print("Playing...")
         core.new_game()
-        communicator.play_game(game_id, core)
-        print("Game over. GG!")
+        try:
+            communicator.play_game(game_id, core)
+        except Exception as err:
+            # Even if something goes wrong, does that really mean
+            # we gotta stop everything? Maybe it's a network issue,
+            # in which case the loop will go around and we end up
+            # playing the same game. If its an unexpected ending
+            # from other side, we'll terminate, but wait for a new
+            # game.
+            print(f"Game unexpectedly over with error {err}")
+        else:
+            print("Game over. GG!")
