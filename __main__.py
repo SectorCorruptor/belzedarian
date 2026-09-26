@@ -2,8 +2,6 @@
 
 Not much to see here. Run as the top-level user to activate
 the bot on Lichess and be able to play it.
-
-The difference between this and core.py is that, well, this 
 """
 
 import json
