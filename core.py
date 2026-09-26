@@ -33,7 +33,7 @@ class Core:
         if not self.out_of_eval:
             try:
                 move = _query.query_from_url(fen)
-                print(move, move is None)
+                print(move)#, move is None)
                 if move is not None:
                     return move
                 self.out_of_eval = True # we've reached unexplored territory
